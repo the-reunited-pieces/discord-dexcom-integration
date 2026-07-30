@@ -49,12 +49,19 @@ const egvsValidator = z.object({
             status: z.string().optional(),
             trend: z.string().optional(),
             trendRate: z.number().optional(),
-            unit: z.string(),
-            rateUnit: z.string(),
+            unit: z.literal("mg/dL"),
+            rateUnit: z.literal("mg/dL/min"),
             displayDevice: z.string(),
             transmitterGeneration: z.string(),
             transmitterGenerationVariant: z.string().optional(),
             displayApp: z.string().optional(),
         })
+        .transform((obj) => ({
+            ...obj,
+            valueInMgdl: obj.value,
+            valueInMmoll: obj.value === undefined ? undefined : obj.value / 18,
+            rateInMgdlmin: obj.trendRate,
+            rateInMmollmin: obj.trendRate === undefined ? undefined : obj.trendRate / 18,
+        }))
         .array(),
 });
