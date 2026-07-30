@@ -6,7 +6,7 @@ async function makeRequest<T extends z.ZodObject>(
     path: string,
     validator: T,
 ): Promise<{ error: string; value: null } | { error: null; value: z.infer<T> }> {
-    const doc = await db.tokens.findOne({ id });
+    const doc = await db.users.findOne({ id });
     if (!doc || doc.expires_at <= Date.now()) return { error: "auth", value: null };
 
     const res = await fetch(`${Bun.env.DEXCOM_API}/v3/users/self${path}`, { headers: { Authorization: `Bearer ${doc.access_token}` } });
@@ -32,10 +32,30 @@ export const api = {
             `/egvs?${new URLSearchParams({ startDate: start.toISOString().slice(0, -1), endDate: end.toISOString().slice(0, -1) })}`,
             egvsValidator,
         ),
+    dataRange: async (id: string) => await makeRequest(id, "/dataRange", dataRangeValidator),
 };
 
+const systemAndDisplayTime = z.object({
+    systemTime: z.string(),
+    displayTime: z.string(),
+});
+
+const startAndEnd = z.object({
+    start: systemAndDisplayTime,
+    end: systemAndDisplayTime,
+});
+
+const dataRangeValidator = z.object({
+    recordType: z.literal("dataRange"),
+    recordVersion: z.string(),
+    userId: z.string(),
+    calibrations: startAndEnd.optional(),
+    egvs: startAndEnd.optional(),
+    events: startAndEnd.optional(),
+});
+
 const egvsValidator = z.object({
-    recordType: z.string(),
+    recordType: z.literal("egv"),
     recordVersion: z.string(),
     userId: z.string(),
     records: z
